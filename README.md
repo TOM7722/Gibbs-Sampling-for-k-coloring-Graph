@@ -11,6 +11,9 @@ The code uses Gibbs sampling, a Markov Chain Monte Carlo (MCMC) method, to sampl
 
 The main goal is to estimate how many different valid k-colorings exist for a given graph as k increases.
 
+## Important Note
+This implementation provides an estimation rather than an exact count of all possible colorings. The algorithm does not guarantee finding all valid colorings, and the accuracy depends heavily on the number of iterations. 
+
 ## Requirements
 
 ```python
