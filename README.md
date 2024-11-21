@@ -12,7 +12,10 @@ The code uses Gibbs sampling, a Markov Chain Monte Carlo (MCMC) method, to sampl
 The main goal is to estimate how many different valid k-colorings exist for a given graph as k increases.
 
 ## Important Note
-This implementation provides an estimation rather than an exact count of all possible colorings. The algorithm does not guarantee finding all valid colorings, and the accuracy depends heavily on the number of iterations. 
+This implementation provides an estimation rather than an exact count of all possible colorings. The algorithm does not guarantee finding all valid colorings, and the accuracy depends heavily on the number of iterations.
+
+## Statistical Analysis
+The code includes additional functionality to assess the uniformity of the sampled colorings using chi-square tests. Statistical analysis of the sampling methods reveals that systematic Gibbs sampling achieves better uniformity in the distribution of colorings compared to random sampling. With 1000 iterations, systematic sampling shows no significant deviation from uniformity (p-value = 0.772), while random sampling exhibits strong non-uniform behavior (p-value = 3.71e-140). 
 
 ## Requirements
 
