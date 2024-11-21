@@ -1,16 +1,23 @@
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
 import random
 import pandas as pd
-from joblib import Parallel, delayed
-from tqdm import tqdm
+from scipy import stats
+
+
+def chi_squared_test(counts):
+    observed = np.array(list(counts.values()))
+    expected = np.full_like(observed, fill_value=np.mean(observed), dtype=float)
+    chi2_stat, p_value = stats.chisquare(observed, f_exp=expected)
+    return chi2_stat, p_value
 
 
 def gibbs_balayage_random(G, num_colors, n):
     count = {}
     totalColorSet = set(range(num_colors))
 
-    for i in tqdm(range(n), desc=f"k={num_colors}", leave=True):
+    for i in range(n):
 
         j = random.choice(list(G.nodes()))
 
@@ -29,10 +36,11 @@ def gibbs_balayage_random(G, num_colors, n):
 
     return count
 
-def gibbs_balayage_systemique(G, num_colors, n):
+
+def gibbs_balayage_systemique(G, num_colors, n, burn_in):
     count = {}
     totalColorSet = set(range(num_colors))
-    for i in tqdm(range(n), desc=f"k={num_colors}", leave=True):
+    for i in range(n):
         for j in range(1,G.number_of_nodes() + 1):
             colorSet = set()
             for neighbor in G.neighbors(j):
@@ -43,33 +51,17 @@ def gibbs_balayage_systemique(G, num_colors, n):
             if available_colors:
                 G.nodes[j]['color'] = random.choice(list(available_colors))
 
-        couleurs_string = ''.join(str(G.nodes[node]['color'])
-                                  for node in sorted(G.nodes()))
-        count[couleurs_string] = count.get(couleurs_string, 0) + 1
+        if i >= burn_in:
+            couleurs_string = ''.join(str(G.nodes[node]['color'])
+                                      for node in sorted(G.nodes()))
+            count[couleurs_string] = count.get(couleurs_string, 0) + 1
 
     return count
-
-def execute_gibbs_for_k(G, k, n):
-    G_copy = G.copy()
-    return k, gibbs_balayage_random(G_copy, k, n)
-
-def k_coloring(k_start, k_end, iteration):
-    count = Parallel(n_jobs=-1)(
-        delayed(execute_gibbs_for_k)(
-            G,
-            k,
-            iteration * 2**(k - k_start + 1)
-        ) for k in range(k_start, k_end)
-    )
-
-    results = {k: len(colorings) for k, colorings in dict(count).items()}
-    return results
 
 def plot_graph(G):
     plt.figure(figsize=(10, 10))
     nx.draw(G, with_labels=True)
     plt.show()
-
 
 G = nx.Graph()
 
@@ -85,23 +77,24 @@ initial_coloring = {
     5: 2
 }
 
+
 for node, color in initial_coloring.items():
     G.nodes[node]['color'] = color
 
 plot_graph(G)
 
-results = k_coloring(4, 12, 5000)
+count = gibbs_balayage_systemique(G, num_colors, int(216_000), int(0))
+df = pd.DataFrame(list(count.items()), columns=['Couleurs', 'Compte'])
+df.to_csv('gibbs.csv', index = False)
 
-df = pd.DataFrame(list(results.items()), columns=['k', 'Nombre de coloriages'])
+chi2_stat, p_value = chi_squared_test(count)
+print(f"Statistique du chi-deux : {chi2_stat}")
+print(f"P-valeur : {p_value}")
+
 
 plt.figure(figsize=(10, 6))
-plt.bar(df['k'], df['Nombre de coloriages'], color='b', alpha=0.6)
-plt.xlabel('Nombre de couleurs (k)')
-plt.ylabel('Nombre de coloriages différents')
-plt.title('Nombre de coloriages différents par nombre de couleurs')
+plt.scatter(range(len(df)), df['Compte'], color='b', alpha=0.6, s=10)
+plt.xlabel('Index (hidden)')
+plt.ylabel('Compte')
 
-for i, v in enumerate(df['Nombre de coloriages']):
-    plt.text(df['k'][i], v, str(v), ha='center', va='bottom')
-
-plt.xticks(df['k'])
 plt.show()
